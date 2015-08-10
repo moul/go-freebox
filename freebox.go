@@ -9,6 +9,7 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
+// ApiVersion is returned by requesting `GET /api_version`
 type ApiVersion struct {
 	UID        string `json:"uid",omitempty`
 	DeviceName string `json:"device_name",omitempty`
@@ -17,6 +18,7 @@ type ApiVersion struct {
 	DeviceType string `json:"device_type",omitempty`
 }
 
+// Client is the Freebox API client
 type Client struct {
 	URL     string
 	TrackId int
@@ -26,6 +28,7 @@ type Client struct {
 	client     *http.Client
 }
 
+// New returns a `Client` object with standard configuration
 func New() *Client {
 	return &Client{
 		URL:     "http://mafreebox.free.fr/",
@@ -35,6 +38,12 @@ func New() *Client {
 	}
 }
 
+// ApiVersion returns an `ApiVersion` structure field with the configuration fetched during `Connect()`
+func (c *Client) ApiVersion() *ApiVersion {
+	return &c.apiVersion
+}
+
+// GetApiResource performs low-level GET request on the Freebox API
 func (c *Client) GetApiResource(resource string) ([]byte, error) {
 	url := fmt.Sprintf("%s%s", c.URL, resource)
 	logrus.Debugf("GET %q", url)
@@ -58,6 +67,7 @@ func (c *Client) GetApiResource(resource string) ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
+// Connect tries to contact the Freebox API, and fetches API versions
 func (c *Client) Connect() error {
 	body, err := c.GetApiResource("api_version")
 	if err != nil {
