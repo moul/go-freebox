@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 )
@@ -43,6 +44,10 @@ func (c *Client) ApiVersion() *ApiVersion {
 	return &c.apiVersion
 }
 
+func (a *ApiVersion) ApiCode() string {
+	return "v" + strings.Split(a.Version, ".")[0]
+}
+
 // GetApiResource performs low-level GET request on the Freebox API
 func (c *Client) GetApiResource(resource string) ([]byte, error) {
 	url := fmt.Sprintf("%s%s", c.URL, resource)
@@ -54,6 +59,31 @@ func (c *Client) GetApiResource(resource string) ([]byte, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode > 299 {
+		return nil, fmt.Errorf("Status code: %d", resp.StatusCode)
+	}
+	return ioutil.ReadAll(resp.Body)
+}
+
+// GetApiResource performs low-level GET request on the Freebox API
+func (c *Client) GetApiResourceAuth(resource string) ([]byte, error) {
+	url := fmt.Sprintf("%s%s%s/%s", strings.TrimRight(c.URL, "/"), c.apiVersion.BaseURL, c.apiVersion.ApiCode(), resource)
+	logrus.Debugf("GET %q", url)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Fbx-App-Auth", c.Token)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -82,5 +112,14 @@ func (c *Client) Connect() error {
 
 	logrus.Debugf("API version: UID=%q DeviceName=%q Version=%q BaseURL=%q DeviceType=%q", c.apiVersion.UID, c.apiVersion.DeviceName, c.apiVersion.Version, c.apiVersion.BaseURL, c.apiVersion.DeviceType)
 
+	return nil
+}
+
+func (c *Client) DownloadsStats() error {
+	body, err := c.GetApiResourceAuth("downloads/stats")
+	if err != nil {
+		return err
+	}
+	fmt.Println(body)
 	return nil
 }

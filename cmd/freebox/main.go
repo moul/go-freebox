@@ -17,5 +17,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(fbx)
+	fmt.Println(fbx.DownloadsStats())
 }
